@@ -1,0 +1,34 @@
+name: Dev CI
+
+on:
+  push:
+    branches: [ "dev" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Configure AWS
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Login to ECR
+      run: |
+        aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
+        docker login --username AWS --password-stdin 209578578300.dkr.ecr.eu-north-1.amazonaws.com
+
+    - name: Build Docker Image
+      run: docker build -t fastapi-app .
+
+    - name: Tag Image
+      run: docker tag fastapi-app:latest ${{ secrets.ECR_REPO }}:latest
+
+    - name: Push Image
+      run: docker push ${{ secrets.ECR_REPO }}:latest

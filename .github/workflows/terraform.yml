@@ -1,0 +1,46 @@
+name: Terraform Deploy
+
+on:
+  push:
+    branches:
+      - dev
+      - staging
+      - main
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Select Environment Folder
+      run: |
+        if [ "${{ github.ref_name }}" = "dev" ]; then
+          echo "ENV=dev" >> $GITHUB_ENV
+        elif [ "${{ github.ref_name }}" = "staging" ]; then
+          echo "ENV=staging" >> $GITHUB_ENV
+        else
+          echo "ENV=prod" >> $GITHUB_ENV
+        fi
+
+    - name: Terraform Init
+      run: |
+        cd terraform/$ENV
+        terraform init
+
+    - name: Terraform Apply
+      run: |
+        cd terraform/$ENV
+        terraform apply -auto-approve
